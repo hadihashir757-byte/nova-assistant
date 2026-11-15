@@ -54,6 +54,7 @@
   <div id="log"></div>
   <form id="form">
     <input id="input" autocomplete="off" placeholder="Ask me anything…">
+    <button type="button" id="mute" title="Mute / unmute voice" style="width:52px;padding:0;font-size:1.3rem">🔊</button>
     <button type="button" id="mic" title="Speak">🎙️</button>
     <button type="submit">Send</button>
   </form>
@@ -65,6 +66,9 @@
 const log = document.getElementById('log'), statusEl = document.getElementById('status'),
       orbWrap = document.getElementById('orbWrap'), input = document.getElementById('input');
 let userName = localStorageGet('nova_name');
+let muted = localStorageGet('nova_muted')==='1';
+const IDLE='Tap the orb or the mic to talk';
+function stopSpeaking(){if('speechSynthesis' in window)speechSynthesis.cancel();orbWrap.classList.remove('speaking');if(statusEl.textContent.startsWith('Speaking'))statusEl.textContent=IDLE}
 
 function localStorageGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function localStorageSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
@@ -85,11 +89,11 @@ function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en-(
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 function say(text, html){
   addMsg(text,'nova',html);
-  if(!('speechSynthesis' in window)) return;
+  if(!('speechSynthesis' in window)||muted) return;
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text.replace(/[*_#]/g,''));
   if(voice) u.voice=voice; u.rate=1.02; u.pitch=1.05;
-  u.onstart=()=>{orbWrap.classList.add('speaking');statusEl.textContent='Speaking'};
+  u.onstart=()=>{orbWrap.classList.add('speaking');statusEl.textContent='Speaking — tap the orb or press Esc to stop'};
   u.onend=()=>{orbWrap.classList.remove('speaking');statusEl.textContent='Tap the orb or the mic to talk'};
   speechSynthesis.speak(u);
 }
@@ -119,7 +123,7 @@ function handle(raw){
   if(/^what('s| is) my name$/.test(t)) return say(userName?`Your name is ${userName}.`:`I don't know yet. Say "my name is" followed by your name.`);
   if(/^(what('s| is) your name|who are you)$/.test(t)) return say("I'm NOVA, your personal voice assistant.");
   if(/^how are you( doing)?$/.test(t)) return say("All systems running smoothly. Thanks for asking!");
-  if(/^who (made|created|built) you$/.test(t)) return say("I was built for you as a custom web assistant, running on Cloudflare.");
+  if(/^who (made|created|built) you$/.test(t)) return say("I was built for you as a custom web assistant, hosted on Netlify.");
   if(/^(thanks|thank you)( so much| nova)?$/.test(t)) return say("You're welcome!");
   if(/^(what('s| is) the time( now)?|what time is it( now)?|time|tell me the time)$/.test(t)) return say(`It's ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`);
   if(/^(what('s| is) (the date|today'?s date)( today)?|what day is it( today)?|date|today'?s date)$/.test(t)) return say(`Today is ${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}.`);
@@ -146,7 +150,10 @@ function handle(raw){
   if((m=t.match(/^(?:search(?: for)?|google|look up)\s+(.+)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent(m[1]),`Google results for ${m[1]}`);
   if(/^clear( chat)?$/.test(t)){log.innerHTML='';return say('Cleared.')}
   if(/^(help|what can you do)$/.test(t)) return say("Ask me anything, from simple facts to complex questions, and I'll explain. I can also tell the time and date, open websites, search Google, YouTube or Wikipedia, check the weather, set timers, do maths, and remember your name.");
-  if(/^(bye|goodbye|stop|sleep)/.test(t)) return say(`Goodbye${userName?', '+userName:''}. I'll be here when you need me.`);
+  if(/^(stop|stop talking|be quiet|shut up|quiet|silence)$/.test(t)){stopSpeaking();return}
+  if(/^(mute|mute voice|voice off)$/.test(t)){muted=true;localStorageSet('nova_muted','1');stopSpeaking();showMute();return addMsg('Voice muted. Tap 🔇 to turn it back on.','nova')}
+  if(/^(unmute|voice on)$/.test(t)){muted=false;localStorageSet('nova_muted','0');showMute();return say('Voice is back on.')}
+  if(/^(bye|goodbye|sleep)/.test(t)) return say(`Goodbye${userName?', '+userName:''}. I'll be here when you need me.`);
   return askAI(text);
 }
 
@@ -155,12 +162,12 @@ const history=[];
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function md(s){return esc(s).replace(/```([\s\S]*?)```/g,'<pre style="white-space:pre-wrap;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;margin:6px 0">$1</pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/^\s*[-*]\s+/gm,'• ').replace(/\n/g,'<br>')}
 function speakOnly(text){
-  if(!('speechSynthesis' in window)) return;
+  if(!('speechSynthesis' in window)||muted) return;
   speechSynthesis.cancel();
   const clean=text.replace(/```[\s\S]*?```/g,' code shown on screen. ').replace(/[*_#`>]/g,'').replace(/\s+/g,' ').trim();
   const parts=clean.match(/[^.!?]+[.!?]*/g)||[clean];
   parts.forEach((p,i)=>{const u=new SpeechSynthesisUtterance(p.trim());if(voice)u.voice=voice;u.rate=1.02;u.pitch=1.05;
-    if(i===0)u.onstart=()=>{orbWrap.classList.add('speaking');statusEl.textContent='Speaking'};
+    if(i===0)u.onstart=()=>{orbWrap.classList.add('speaking');statusEl.textContent='Speaking — tap the orb or press Esc to stop'};
     if(i===parts.length-1)u.onend=()=>{orbWrap.classList.remove('speaking');statusEl.textContent='Tap the orb or the mic to talk'};
     speechSynthesis.speak(u)});
 }
@@ -179,7 +186,7 @@ async function askAI(q){
     if(!full) full="Sorry, I couldn't come up with an answer. Please try again.";
     m.innerHTML=md(full); history.push({role:'assistant',content:full}); speakOnly(full);
   }catch(e){
-    history.pop(); full=(e&&/tomorrow/.test(e.message))?e.message:"Sorry, I couldn't reach my AI brain just now. Please try again in a moment.";console.warn('NOVA AI error:',e);
+    history.pop(); full="Sorry, I couldn't reach my AI brain just now. Please try again in a moment.";console.warn('NOVA AI error:',e);
     m.textContent=full; speakOnly(full);
   }finally{busy=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Thinking…')statusEl.textContent='Tap the orb or the mic to talk'}
 }
@@ -196,7 +203,16 @@ function toggleMic(){
   if(!rec){say("Voice input isn't supported in this browser. Try Chrome or Edge, or type your command.");return}
   if(listening) rec.stop(); else {speechSynthesis.cancel();try{rec.start()}catch(e){}}
 }
-orbWrap.onclick=toggleMic; document.getElementById('mic').onclick=toggleMic;
+function orbTap(){
+  if('speechSynthesis' in window && (speechSynthesis.speaking||speechSynthesis.pending)){stopSpeaking();return}
+  toggleMic();
+}
+orbWrap.onclick=orbTap;
+const muteBtn=document.getElementById('mute');
+function showMute(){muteBtn.textContent=muted?'🔇':'🔊';muteBtn.title=muted?'Voice is off (tap to turn on)':'Voice is on (tap to mute)'}
+showMute();
+muteBtn.onclick=()=>{muted=!muted;localStorageSet('nova_muted',muted?'1':'0');if(muted)stopSpeaking();showMute()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')stopSpeaking()}); document.getElementById('mic').onclick=toggleMic;
 document.getElementById('form').onsubmit=e=>{e.preventDefault();handle(input.value);input.value=''};
 
 ['Explain black holes simply','Give me 3 healthy breakfast ideas','What time is it?','Open YouTube','Set timer for 1 minute','What can you do?'].forEach(c=>{
