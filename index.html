@@ -119,7 +119,7 @@ function handle(raw){
   if(/^what('s| is) my name$/.test(t)) return say(userName?`Your name is ${userName}.`:`I don't know yet. Say "my name is" followed by your name.`);
   if(/^(what('s| is) your name|who are you)$/.test(t)) return say("I'm NOVA, your personal voice assistant.");
   if(/^how are you( doing)?$/.test(t)) return say("All systems running smoothly. Thanks for asking!");
-  if(/^who (made|created|built) you$/.test(t)) return say("I was built for you as a custom web assistant, hosted on Netlify.");
+  if(/^who (made|created|built) you$/.test(t)) return say("I was built for you as a custom web assistant, running on Cloudflare.");
   if(/^(thanks|thank you)( so much| nova)?$/.test(t)) return say("You're welcome!");
   if(/^(what('s| is) the time( now)?|what time is it( now)?|time|tell me the time)$/.test(t)) return say(`It's ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`);
   if(/^(what('s| is) (the date|today'?s date)( today)?|what day is it( today)?|date|today'?s date)$/.test(t)) return say(`Today is ${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}.`);
@@ -179,7 +179,7 @@ async function askAI(q){
     if(!full) full="Sorry, I couldn't come up with an answer. Please try again.";
     m.innerHTML=md(full); history.push({role:'assistant',content:full}); speakOnly(full);
   }catch(e){
-    history.pop(); full="Sorry, I couldn't reach my AI brain just now. Please try again in a moment.";console.warn('NOVA AI error:',e);
+    history.pop(); full=(e&&/tomorrow/.test(e.message))?e.message:"Sorry, I couldn't reach my AI brain just now. Please try again in a moment.";console.warn('NOVA AI error:',e);
     m.textContent=full; speakOnly(full);
   }finally{busy=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Thinking…')statusEl.textContent='Tap the orb or the mic to talk'}
 }
