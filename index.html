@@ -63,6 +63,7 @@
   <div id="log"></div>
   <form id="form">
     <input id="input" autocomplete="off" placeholder="Ask me anything…">
+    <button type="button" id="wakeBtn" title="Hey NOVA listening" style="width:52px;padding:0;font-size:1.3rem">👂</button>
     <button type="button" id="mute" title="Mute / unmute voice" style="width:52px;padding:0;font-size:1.3rem">🔊</button>
     <button type="button" id="mic" title="Speak">🎙️</button>
     <button type="submit">Send</button>
@@ -170,7 +171,7 @@ function handle(raw){
   if((m=t.match(/^(?:call|phone|dial|ring)\s+(.+)$/))) return say(`I can't see your contacts, so please say the number, for example: call 9876543210.`);
   if((m=text.match(/^(?:text|sms|message)\s+(\+?\d[\d\s()-]*\d)(?:\s+(?:saying|that|:)?\s*(.*))?$/i))){const n=m[1].replace(/[^\d+]/g,'');location.href='sms:'+n+(m[2]?'?&body='+encodeURIComponent(m[2]):'');return say(`Opening a text to ${n}.`)}
   if((m=text.match(/^whats\s?app\s+(\+?\d[\d\s()-]*\d)(?:\s+(?:saying|that|:)?\s*(.*))?$/i))){const n=m[1].replace(/[^\d]/g,'');return openSite('https://wa.me/'+n+(m[2]?'?text='+encodeURIComponent(m[2]):''),`WhatsApp chat with ${n}`)}
-  if((m=text.match(/^(?:e-?mail|mail)\s+(\S+@\S+)(?:\s+(?:saying|about|that|:)\s*|\s+)?(.*)$/i))){openSite('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(m[1])+(m[2]?'&body='+encodeURIComponent(m[2]):''),`an email to ${m[1]}`);return}
+  if((m=text.match(/^(?:e-?mail|mail)\s+(\S+@\S+)(?:\s+(?:saying|about|that|:)\s*|\s+)?(.*)$/i))){const to=m[1],bd=m[2]||'';if(/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)){location.href='mailto:'+to+(bd?'?body='+encodeURIComponent(bd):'')}else{openSite('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(to)+(bd?'&body='+encodeURIComponent(bd):''),`an email to ${to}`)}return say(`Opening an email to ${to}.`)}
   if(/^(battery|battery level|how much battery|what('s| is) my battery( level)?)( left)?$/.test(t)){
     if(!navigator.getBattery) return say("This browser doesn't share battery information.");
     navigator.getBattery().then(b=>say(`Your battery is at ${Math.round(b.level*100)} percent${b.charging?' and charging':''}.`));return;
@@ -242,11 +243,11 @@ if(SR){rec=new SR();rec.lang='en-IN';rec.interimResults=true;rec.maxAlternatives
   rec.onstart=()=>{listening=true;orbWrap.classList.add('listening');statusEl.textContent='Listening…'};
   rec.onresult=e=>{const r=e.results[e.results.length-1];input.value=r[0].transcript;if(r.isFinal){input.value='';handle(r[0].transcript)}};
   rec.onerror=e=>{statusEl.textContent=e.error==='not-allowed'?'Microphone blocked — allow it in your browser':'Didn\'t catch that — try again'};
-  rec.onend=()=>{listening=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Listening…')statusEl.textContent='Tap the orb or the mic to talk'};
+  rec.onend=()=>{listening=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Listening…')statusEl.textContent='Tap the orb or the mic to talk';if(wake)startWake()};
 }
 function toggleMic(){
   if(!rec){say("Voice input isn't supported in this browser. Try Chrome or Edge, or type your command.");return}
-  if(listening) rec.stop(); else {speechSynthesis.cancel();try{rec.start()}catch(e){}}
+  if(listening) rec.stop(); else {speechSynthesis.cancel();pauseWake();try{rec.start()}catch(e){}}
 }
 function orbTap(){
   if('speechSynthesis' in window && (speechSynthesis.speaking||speechSynthesis.pending)){stopSpeaking();return}
@@ -266,6 +267,34 @@ function installApp(){
 }
 installBtn.onclick=installApp;
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+// ---- "Hey NOVA" wake word (always listening) ----
+let wake = localStorageGet('nova_wake')==='1';
+let wakeRec=null, wakeSuppress=false;
+const wakeBtn=document.getElementById('wakeBtn');
+function showWake(){wakeBtn.style.opacity=wake?'1':'.4';wakeBtn.title=wake?'Listening for \"Hey NOVA\" — tap to turn off':'Tap so NOVA always listens for \"Hey NOVA\"';}
+function buildWake(){
+  if(wakeRec||!SR) return;
+  wakeRec=new SR(); wakeRec.lang='en-IN'; wakeRec.continuous=true; wakeRec.interimResults=false;
+  wakeRec.onresult=e=>{
+    if(busy||listening||(('speechSynthesis' in window)&&speechSynthesis.speaking)) return;
+    const r=e.results[e.results.length-1]; if(!r||!r.isFinal) return;
+    const mm=r[0].transcript.toLowerCase().trim().match(/\b(?:hey|hi|ok|okay|hello)\s+nova\b[,:\s]*(.*)$/);
+    if(mm){ if(navigator.vibrate)navigator.vibrate(60); const cmd=mm[1].trim();
+      if(cmd){ handle(cmd); } else { statusEl.textContent="Yes? I'm listening…"; toggleMic(); } }
+  };
+  wakeRec.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ wake=false; localStorageSet('nova_wake','0'); showWake(); addMsg('I need microphone access to listen for \"Hey NOVA\". Please allow it, then tap 👂 again.','nova'); } };
+  wakeRec.onend=()=>{ if(wake&&!wakeSuppress) setTimeout(()=>{try{wakeRec.start()}catch(e){}},400); };
+}
+function startWake(){ buildWake(); if(!wakeRec)return; wakeSuppress=false; try{wakeRec.start()}catch(e){} }
+function pauseWake(){ wakeSuppress=true; if(wakeRec){try{wakeRec.stop()}catch(e){}} }
+wakeBtn.onclick=()=>{
+  if(!SR) return say("Voice input isn't supported in this browser. Try Chrome or Edge.");
+  wake=!wake; localStorageSet('nova_wake',wake?'1':'0'); showWake();
+  if(wake){ startWake(); addMsg('Now listening for \"Hey NOVA\". Keep this tab open and say, for example, \"Hey NOVA, what\'s the time?\"','nova'); }
+  else { wake=false; pauseWake(); addMsg('Stopped listening for \"Hey NOVA\".','nova'); }
+};
+showWake();
+if(wake) startWake();
 document.getElementById('newChat').onclick=()=>{if(!busy)newChat()};
 const muteBtn=document.getElementById('mute');
 function showMute(){muteBtn.textContent=muted?'🔇':'🔊';muteBtn.title=muted?'Voice is off (tap to turn on)':'Voice is on (tap to mute)'}
