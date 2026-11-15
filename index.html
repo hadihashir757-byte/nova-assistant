@@ -1,0 +1,176 @@
+<p>test</p>
+  line2<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVA — Voice Assistant</title>
+<style>
+  :root{--bg:#05070f;--panel:rgba(20,28,52,.55);--line:rgba(120,160,255,.18);--a:#5ef0d0;--b:#8b7bff;--text:#e6ecff;--dim:#8a95b8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(ellipse at top,#0c1430 0%,var(--bg) 60%);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(circle at center,black 20%,transparent 75%);opacity:.35;pointer-events:none}
+  header{width:100%;max-width:900px;display:flex;justify-content:space-between;align-items:center;padding:22px 24px;position:relative;z-index:1}
+  .logo{font-weight:700;letter-spacing:.35em;font-size:1.1rem;background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;color:transparent}
+  #clock{font-variant-numeric:tabular-nums;color:var(--dim);font-size:.95rem;letter-spacing:.08em}
+  main{width:100%;max-width:900px;flex:1;display:flex;flex-direction:column;align-items:center;padding:0 20px 24px;position:relative;z-index:1}
+  .orb-wrap{position:relative;width:230px;height:230px;margin:14px 0 8px;cursor:pointer}
+  .ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--a);border-left-color:var(--b);animation:spin 6s linear infinite}
+  .ring.r2{inset:18px;border-top-color:var(--b);border-right-color:var(--a);animation-duration:9s;animation-direction:reverse;opacity:.7}
+  .ring.r3{inset:36px;border:1px dashed rgba(94,240,208,.35);animation-duration:20s}
+  .orb{position:absolute;inset:58px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d9fff6 0%,var(--a) 25%,var(--b) 70%,#2b1d6b 100%);box-shadow:0 0 40px rgba(94,240,208,.45),0 0 90px rgba(139,123,255,.35);transition:transform .25s}
+  .orb-wrap.listening .orb{animation:pulse 1s ease-in-out infinite}
+  .orb-wrap.speaking .orb{animation:pulse .5s ease-in-out infinite}
+  .orb-wrap.listening .ring{animation-duration:1.6s}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{50%{transform:scale(1.12);box-shadow:0 0 70px rgba(94,240,208,.7),0 0 140px rgba(139,123,255,.55)}}
+  #status{color:var(--dim);font-size:.9rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:16px;min-height:1.2em}
+  #log{width:100%;flex:1;min-height:200px;max-height:42vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;backdrop-filter:blur(8px);display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:82%;padding:10px 14px;border-radius:14px;line-height:1.45;font-size:.95rem;animation:in .25s ease}
+  .msg.user{align-self:flex-end;background:rgba(139,123,255,.22);border:1px solid rgba(139,123,255,.35)}
+  .msg.nova{align-self:flex-start;background:rgba(94,240,208,.1);border:1px solid rgba(94,240,208,.28)}
+  .msg a{color:var(--a)}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}}
+  form{width:100%;display:flex;gap:10px;margin-top:14px}
+  input{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px;color:var(--text);font-size:1rem;outline:none}
+  input:focus{border-color:var(--a)}
+  button{border:none;border-radius:12px;padding:0 18px;font-size:1rem;cursor:pointer;color:#05070f;font-weight:600;background:linear-gradient(135deg,var(--a),var(--b))}
+  #mic{width:52px;padding:0;font-size:1.3rem}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+  .chip{background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:400;font-size:.82rem;padding:7px 12px;border-radius:999px}
+  .chip:hover{color:var(--text);border-color:var(--a)}
+  footer{color:var(--dim);font-size:.75rem;padding:14px;opacity:.7;position:relative;z-index:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">N O V A</div>
+  <div id="clock"></div>
+</header>
+<main>
+  <div class="orb-wrap" id="orbWrap" title="Tap to talk">
+    <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="orb"></div>
+  </div>
+  <div id="status">Tap the orb or the mic to talk</div>
+  <div id="log"></div>
+  <form id="form">
+    <input id="input" autocomplete="off" placeholder="Type a command… e.g. “open youtube”">
+    <button type="button" id="mic" title="Speak">🎙️</button>
+    <button type="submit">Send</button>
+  </form>
+  <div class="chips" id="chips"></div>
+</main>
+<footer>NOVA works best in Chrome or Edge. Microphone access is needed for voice.</footer>
+
+<script>
+const log = document.getElementById('log'), statusEl = document.getElementById('status'),
+      orbWrap = document.getElementById('orbWrap'), input = document.getElementById('input');
+let userName = localStorageGet('nova_name');
+
+function localStorageGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function localStorageSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+// Clock
+function tick(){const d=new Date();document.getElementById('clock').textContent=d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+'  ·  '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+tick();setInterval(tick,1000);
+
+function addMsg(text, who, html){
+  const m=document.createElement('div');m.className='msg '+who;
+  if(html) m.innerHTML=html; else m.textContent=text;
+  log.appendChild(m);log.scrollTop=log.scrollHeight;
+}
+
+// Speech output
+let voice=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en-(GB|IN|US)/.test(v.lang)&&/female|zira|samantha|google uk english female|heera/i.test(v.name))||vs.find(v=>v.lang.startsWith('en'))||null}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function say(text, html){
+  addMsg(text,'nova',html);
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text.replace(/[*_#]/g,''));
+  if(voice) u.voice=voice; u.rate=1.02; u.pitch=1.05;
+  u.onstart=()=>{orbWrap.classList.add('speaking');statusEl.textContent='Speaking'};
+  u.onend=()=>{orbWrap.classList.remove('speaking');statusEl.textContent='Tap the orb or the mic to talk'};
+  speechSynthesis.speak(u);
+}
+
+function openSite(url,label){
+  const w=window.open(url,'_blank');
+  if(w) say(`Opening ${label}.`);
+  else say(`Here you go: ${label}.`,`Here you go: <a href="${url}" target="_blank" rel="noopener">open ${label}</a> (your browser blocked the pop-up).`);
+}
+
+const sites={youtube:'https://www.youtube.com',google:'https://www.google.com',gmail:'https://mail.google.com',wikipedia:'https://www.wikipedia.org',github:'https://github.com',maps:'https://maps.google.com','google maps':'https://maps.google.com',instagram:'https://www.instagram.com',facebook:'https://www.facebook.com',whatsapp:'https://web.whatsapp.com',twitter:'https://x.com',x:'https://x.com',netflix:'https://www.netflix.com',amazon:'https://www.amazon.in',spotify:'https://open.spotify.com',linkedin:'https://www.linkedin.com',news:'https://news.google.com',chatgpt:'https://chatgpt.com',claude:'https://claude.ai'};
+
+const jokes=["Why do programmers prefer dark mode? Because light attracts bugs.","I told my computer I needed a break. It said: no problem, I'll go to sleep.","Why did the robot go on holiday? It needed to recharge its batteries.","What do you call a doctor who fixes websites? A URL-ologist.","Why was the math book sad? It had too many problems.","Why don't skeletons fight each other? They don't have the guts."];
+const facts=["Honey never spoils — edible honey has been found in ancient Egyptian tombs.","Octopuses have three hearts and blue blood.","A day on Venus is longer than its year.","Your brain uses about 20 percent of your body's energy.","Bananas are berries, but strawberries are not.","There are more possible chess games than atoms in the observable universe."];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+function greet(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
+
+function handle(raw){
+  const text=raw.trim(); if(!text) return;
+  addMsg(text,'user');
+  const t=text.toLowerCase().replace(/[?!.,]+$/,'').replace(/^(hey |ok |okay )?nova[, ]*/,'');
+  let m;
+
+  if(/^(hi|hello|hey|namaste|good (morning|afternoon|evening))\b/.test(t)) return say(`${greet()}${userName?', '+userName:''}! How can I help you?`);
+  if((m=t.match(/(?:my name is|call me)\s+(.+)/))){userName=m[1].replace(/\b\w/g,c=>c.toUpperCase());localStorageSet('nova_name',userName);return say(`Nice to meet you, ${userName}. I'll remember that.`)}
+  if(/what('s| is) my name/.test(t)) return say(userName?`Your name is ${userName}.`:`I don't know yet. Say "my name is" followed by your name.`);
+  if(/your name|who are you/.test(t)) return say("I'm NOVA, your personal voice assistant.");
+  if(/how are you/.test(t)) return say("All systems running smoothly. Thanks for asking!");
+  if(/who (made|created|built) you/.test(t)) return say("I was built for you as a custom web assistant, hosted on Netlify.");
+  if(/thank/.test(t)) return say("You're welcome!");
+  if(/\btime\b/.test(t)) return say(`It's ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`);
+  if(/\b(date|day is it|today)\b/.test(t)) return say(`Today is ${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}.`);
+  if(/joke/.test(t)) return say(pick(jokes));
+  if(/fact/.test(t)) return say(pick(facts));
+  if(/flip (a )?coin/.test(t)) return say(`It's ${Math.random()<.5?'heads':'tails'}.`);
+  if(/roll (a )?(dice|die)/.test(t)) return say(`You rolled a ${1+Math.floor(Math.random()*6)}.`);
+  if((m=t.match(/(?:set (?:a )?)?timer (?:for )?(\d+)\s*(second|sec|minute|min|hour)s?/)) || (m=t.match(/(\d+)\s*(second|sec|minute|min|hour)s? timer/))){
+    const n=+m[1],u=m[2],ms=n*(u.startsWith('h')?3600000:u.startsWith('m')?60000:1000);
+    setTimeout(()=>say(`Time's up! Your ${n} ${u.startsWith('h')?'hour':u.startsWith('m')?'minute':'second'} timer is done.`),ms);
+    return say(`Timer set for ${n} ${u.startsWith('h')?'hour':u.startsWith('m')?'minute':'second'}${n>1?'s':''}.`);
+  }
+  if((m=t.match(/^(?:what is |what's |calculate |compute )?([\d\s+\-*/x×÷().%^]+)$/)) && /\d\s*[+\-*/x×÷%^]\s*\d/.test(m[1])){
+    try{const expr=m[1].replace(/[x×]/g,'*').replace(/÷/g,'/').replace(/\^/g,'**');const r=Function('"use strict";return ('+expr+')')();return say(`That's ${+r.toFixed(6)}.`)}catch(e){}
+  }
+  if((m=t.match(/(?:play|search youtube for|youtube)\s+(.+?)(?: on youtube)?$/))) return openSite('https://www.youtube.com/results?search_query='+encodeURIComponent(m[1]),`YouTube results for ${m[1]}`);
+  if((m=t.match(/weather(?: in| at| for)?\s*(.*)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent('weather '+(m[1]||'')),'the weather');
+  if((m=t.match(/(?:wikipedia|wiki)\s+(.+)/))) return openSite('https://en.wikipedia.org/wiki/Special:Search?search='+encodeURIComponent(m[1]),`Wikipedia for ${m[1]}`);
+  if((m=t.match(/^open\s+(.+)/))){
+    const s=m[1].trim(); if(sites[s]) return openSite(sites[s],s.replace(/\b\w/g,c=>c.toUpperCase()));
+    if(/\.\w{2,}$/.test(s)) return openSite('https://'+s.replace(/^https?:\/\//,''),s);
+    return openSite('https://www.google.com/search?q='+encodeURIComponent(s),s);
+  }
+  if((m=t.match(/(?:search(?: for)?|google|look up|find)\s+(.+)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent(m[1]),`Google results for ${m[1]}`);
+  if(/clear/.test(t)){log.innerHTML='';return say('Cleared.')}
+  if(/help|what can you do/.test(t)) return say("I can tell the time and date, open websites, search Google, YouTube or Wikipedia, check the weather, set timers, do maths, flip a coin, tell jokes and fun facts, and remember your name.");
+  if(/^(bye|goodbye|stop|sleep)/.test(t)) return say(`Goodbye${userName?', '+userName:''}. I'll be here when you need me.`);
+  return say(`I'm not sure about that, so I'll search it for you.`,`I'm not sure about that, so here's a <a href="https://www.google.com/search?q=${encodeURIComponent(text)}" target="_blank" rel="noopener">Google search for “${text.replace(/</g,'&lt;')}”</a>.`);
+}
+
+// Speech input
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition; let rec=null, listening=false;
+if(SR){rec=new SR();rec.lang='en-IN';rec.interimResults=true;rec.maxAlternatives=1;
+  rec.onstart=()=>{listening=true;orbWrap.classList.add('listening');statusEl.textContent='Listening…'};
+  rec.onresult=e=>{const r=e.results[e.results.length-1];input.value=r[0].transcript;if(r.isFinal){input.value='';handle(r[0].transcript)}};
+  rec.onerror=e=>{statusEl.textContent=e.error==='not-allowed'?'Microphone blocked — allow it in your browser':'Didn\'t catch that — try again'};
+  rec.onend=()=>{listening=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Listening…')statusEl.textContent='Tap the orb or the mic to talk'};
+}
+function toggleMic(){
+  if(!rec){say("Voice input isn't supported in this browser. Try Chrome or Edge, or type your command.");return}
+  if(listening) rec.stop(); else {speechSynthesis.cancel();try{rec.start()}catch(e){}}
+}
+orbWrap.onclick=toggleMic; document.getElementById('mic').onclick=toggleMic;
+document.getElementById('form').onsubmit=e=>{e.preventDefault();handle(input.value);input.value=''};
+
+['What time is it?','Tell me a joke','Open YouTube','Weather in Hyderabad','Set timer for 1 minute','What can you do?'].forEach(c=>{
+  const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=c;b.onclick=()=>handle(c);document.getElementById('chips').appendChild(b);
+});
+
+addMsg(`${greet()}${userName?', '+userName:''}! I'm NOVA. Tap the orb and speak, or type a command below.`,'nova');
+</script>
+</body>
+</html>
