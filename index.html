@@ -61,7 +61,6 @@
 </main>
 <footer>NOVA works best in Chrome or Edge. Microphone access is needed for voice.</footer>
 
-<script src="https://js.puter.com/v2/"></script>
 <script>
 const log = document.getElementById('log'), statusEl = document.getElementById('status'),
       orbWrap = document.getElementById('orbWrap'), input = document.getElementById('input');
@@ -151,8 +150,8 @@ function handle(raw){
   return askAI(text);
 }
 
-// ---- AI brain (Puter.js, free) ----
-const history=[{role:'system',content:"You are NOVA, a friendly, smart personal voice assistant on a website. Answer any question clearly and accurately, including complex ones. Keep answers fairly short (under about 150 words) unless the user asks for detail, because replies are read aloud. Use simple formatting."}];
+// ---- AI brain (Netlify AI Gateway via /api/chat) ----
+const history=[];
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function md(s){return esc(s).replace(/```([\s\S]*?)```/g,'<pre style="white-space:pre-wrap;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;margin:6px 0">$1</pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/^\s*[-*]\s+/gm,'• ').replace(/\n/g,'<br>')}
 function speakOnly(text){
@@ -167,19 +166,20 @@ function speakOnly(text){
 }
 let busy=false;
 async function askAI(q){
-  if(typeof puter==='undefined'){return say("My AI brain didn't load. Check your internet connection and refresh the page.")}
   if(busy) return;
   busy=true; history.push({role:'user',content:q});
   const m=document.createElement('div');m.className='msg nova';m.innerHTML='<span style="opacity:.6">Thinking…</span>';log.appendChild(m);log.scrollTop=log.scrollHeight;
   statusEl.textContent='Thinking…'; orbWrap.classList.add('listening');
   let full='';
   try{
-    const resp=await puter.ai.chat(history.slice(-21),false,{stream:true});
-    for await(const part of resp){ if(part&&part.text){full+=part.text;m.innerHTML=md(full);log.scrollTop=log.scrollHeight} }
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(-20)})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error||('HTTP '+r.status));
+    full=data.text||'';
     if(!full) full="Sorry, I couldn't come up with an answer. Please try again.";
     m.innerHTML=md(full); history.push({role:'assistant',content:full}); speakOnly(full);
   }catch(e){
-    history.pop(); full="Sorry, I couldn't reach my AI brain just now. If a Puter sign-in window appeared, please sign in (it's free) and ask again.";
+    history.pop(); full="Sorry, I couldn't reach my AI brain just now. Please try again in a moment.";console.warn('NOVA AI error:',e);
     m.textContent=full; speakOnly(full);
   }finally{busy=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Thinking…')statusEl.textContent='Tap the orb or the mic to talk'}
 }
