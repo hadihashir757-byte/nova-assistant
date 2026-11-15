@@ -53,7 +53,7 @@
   <div id="status">Tap the orb or the mic to talk</div>
   <div id="log"></div>
   <form id="form">
-    <input id="input" autocomplete="off" placeholder="Type a command… e.g. “open youtube”">
+    <input id="input" autocomplete="off" placeholder="Ask me anything…">
     <button type="button" id="mic" title="Speak">🎙️</button>
     <button type="submit">Send</button>
   </form>
@@ -61,6 +61,7 @@
 </main>
 <footer>NOVA works best in Chrome or Edge. Microphone access is needed for voice.</footer>
 
+<script src="https://js.puter.com/v2/"></script>
 <script>
 const log = document.getElementById('log'), statusEl = document.getElementById('status'),
       orbWrap = document.getElementById('orbWrap'), input = document.getElementById('input');
@@ -114,20 +115,20 @@ function handle(raw){
   const t=text.toLowerCase().replace(/[?!.,]+$/,'').replace(/^(hey |ok |okay )?nova[, ]*/,'');
   let m;
 
-  if(/^(hi|hello|hey|namaste|good (morning|afternoon|evening))\b/.test(t)) return say(`${greet()}${userName?', '+userName:''}! How can I help you?`);
-  if((m=t.match(/(?:my name is|call me)\s+(.+)/))){userName=m[1].replace(/\b\w/g,c=>c.toUpperCase());localStorageSet('nova_name',userName);return say(`Nice to meet you, ${userName}. I'll remember that.`)}
-  if(/what('s| is) my name/.test(t)) return say(userName?`Your name is ${userName}.`:`I don't know yet. Say "my name is" followed by your name.`);
-  if(/your name|who are you/.test(t)) return say("I'm NOVA, your personal voice assistant.");
-  if(/how are you/.test(t)) return say("All systems running smoothly. Thanks for asking!");
-  if(/who (made|created|built) you/.test(t)) return say("I was built for you as a custom web assistant, hosted on Netlify.");
-  if(/thank/.test(t)) return say("You're welcome!");
-  if(/\btime\b/.test(t)) return say(`It's ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`);
-  if(/\b(date|day is it|today)\b/.test(t)) return say(`Today is ${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}.`);
-  if(/joke/.test(t)) return say(pick(jokes));
-  if(/fact/.test(t)) return say(pick(facts));
-  if(/flip (a )?coin/.test(t)) return say(`It's ${Math.random()<.5?'heads':'tails'}.`);
-  if(/roll (a )?(dice|die)/.test(t)) return say(`You rolled a ${1+Math.floor(Math.random()*6)}.`);
-  if((m=t.match(/(?:set (?:a )?)?timer (?:for )?(\d+)\s*(second|sec|minute|min|hour)s?/)) || (m=t.match(/(\d+)\s*(second|sec|minute|min|hour)s? timer/))){
+  if(/^(hi|hello|hey|hii|namaste|good (morning|afternoon|evening))( there)?$/.test(t)) return say(`${greet()}${userName?', '+userName:''}! How can I help you?`);
+  if((m=t.match(/^(?:my name is|call me)\s+(.+)/))){userName=m[1].replace(/\b\w/g,c=>c.toUpperCase());localStorageSet('nova_name',userName);return say(`Nice to meet you, ${userName}. I'll remember that.`)}
+  if(/^what('s| is) my name$/.test(t)) return say(userName?`Your name is ${userName}.`:`I don't know yet. Say "my name is" followed by your name.`);
+  if(/^(what('s| is) your name|who are you)$/.test(t)) return say("I'm NOVA, your personal voice assistant.");
+  if(/^how are you( doing)?$/.test(t)) return say("All systems running smoothly. Thanks for asking!");
+  if(/^who (made|created|built) you$/.test(t)) return say("I was built for you as a custom web assistant, hosted on Netlify.");
+  if(/^(thanks|thank you)( so much| nova)?$/.test(t)) return say("You're welcome!");
+  if(/^(what('s| is) the time( now)?|what time is it( now)?|time|tell me the time)$/.test(t)) return say(`It's ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`);
+  if(/^(what('s| is) (the date|today'?s date)( today)?|what day is it( today)?|date|today'?s date)$/.test(t)) return say(`Today is ${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}.`);
+  if(/^(tell me a joke|joke|another joke)$/.test(t)) return say(pick(jokes));
+  if(/^(tell me a (fun )?fact|fun fact|random fact)$/.test(t)) return say(pick(facts));
+  if(/^flip (a )?coin$/.test(t)) return say(`It's ${Math.random()<.5?'heads':'tails'}.`);
+  if(/^roll (a )?(dice|die)$/.test(t)) return say(`You rolled a ${1+Math.floor(Math.random()*6)}.`);
+  if((m=t.match(/^(?:set (?:a )?)?timer (?:for )?(\d+)\s*(second|sec|minute|min|hour)s?/)) || (m=t.match(/(\d+)\s*(second|sec|minute|min|hour)s? timer/))){
     const n=+m[1],u=m[2],ms=n*(u.startsWith('h')?3600000:u.startsWith('m')?60000:1000);
     setTimeout(()=>say(`Time's up! Your ${n} ${u.startsWith('h')?'hour':u.startsWith('m')?'minute':'second'} timer is done.`),ms);
     return say(`Timer set for ${n} ${u.startsWith('h')?'hour':u.startsWith('m')?'minute':'second'}${n>1?'s':''}.`);
@@ -135,19 +136,52 @@ function handle(raw){
   if((m=t.match(/^(?:what is |what's |calculate |compute )?([\d\s+\-*/x×÷().%^]+)$/)) && /\d\s*[+\-*/x×÷%^]\s*\d/.test(m[1])){
     try{const expr=m[1].replace(/[x×]/g,'*').replace(/÷/g,'/').replace(/\^/g,'**');const r=Function('"use strict";return ('+expr+')')();return say(`That's ${+r.toFixed(6)}.`)}catch(e){}
   }
-  if((m=t.match(/(?:play|search youtube for|youtube)\s+(.+?)(?: on youtube)?$/))) return openSite('https://www.youtube.com/results?search_query='+encodeURIComponent(m[1]),`YouTube results for ${m[1]}`);
-  if((m=t.match(/weather(?: in| at| for)?\s*(.*)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent('weather '+(m[1]||'')),'the weather');
-  if((m=t.match(/(?:wikipedia|wiki)\s+(.+)/))) return openSite('https://en.wikipedia.org/wiki/Special:Search?search='+encodeURIComponent(m[1]),`Wikipedia for ${m[1]}`);
+  if((m=t.match(/^(?:play|search youtube for|youtube)\s+(.+?)(?: on youtube)?$/))) return openSite('https://www.youtube.com/results?search_query='+encodeURIComponent(m[1]),`YouTube results for ${m[1]}`);
+  if((m=t.match(/^(?:what'?s the |how'?s the )?weather(?: today)?(?: in| at| for)?\s*(.*)$/))) return openSite('https://www.google.com/search?q='+encodeURIComponent('weather '+(m[1]||'')),'the weather');
+  if((m=t.match(/^(?:wikipedia|wiki)\s+(.+)/))) return openSite('https://en.wikipedia.org/wiki/Special:Search?search='+encodeURIComponent(m[1]),`Wikipedia for ${m[1]}`);
   if((m=t.match(/^open\s+(.+)/))){
     const s=m[1].trim(); if(sites[s]) return openSite(sites[s],s.replace(/\b\w/g,c=>c.toUpperCase()));
     if(/\.\w{2,}$/.test(s)) return openSite('https://'+s.replace(/^https?:\/\//,''),s);
     return openSite('https://www.google.com/search?q='+encodeURIComponent(s),s);
   }
-  if((m=t.match(/(?:search(?: for)?|google|look up|find)\s+(.+)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent(m[1]),`Google results for ${m[1]}`);
-  if(/clear/.test(t)){log.innerHTML='';return say('Cleared.')}
-  if(/help|what can you do/.test(t)) return say("I can tell the time and date, open websites, search Google, YouTube or Wikipedia, check the weather, set timers, do maths, flip a coin, tell jokes and fun facts, and remember your name.");
+  if((m=t.match(/^(?:search(?: for)?|google|look up)\s+(.+)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent(m[1]),`Google results for ${m[1]}`);
+  if(/^clear( chat)?$/.test(t)){log.innerHTML='';return say('Cleared.')}
+  if(/^(help|what can you do)$/.test(t)) return say("Ask me anything, from simple facts to complex questions, and I'll explain. I can also tell the time and date, open websites, search Google, YouTube or Wikipedia, check the weather, set timers, do maths, and remember your name.");
   if(/^(bye|goodbye|stop|sleep)/.test(t)) return say(`Goodbye${userName?', '+userName:''}. I'll be here when you need me.`);
-  return say(`I'm not sure about that, so I'll search it for you.`,`I'm not sure about that, so here's a <a href="https://www.google.com/search?q=${encodeURIComponent(text)}" target="_blank" rel="noopener">Google search for “${text.replace(/</g,'&lt;')}”</a>.`);
+  return askAI(text);
+}
+
+// ---- AI brain (Puter.js, free) ----
+const history=[{role:'system',content:"You are NOVA, a friendly, smart personal voice assistant on a website. Answer any question clearly and accurately, including complex ones. Keep answers fairly short (under about 150 words) unless the user asks for detail, because replies are read aloud. Use simple formatting."}];
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function md(s){return esc(s).replace(/```([\s\S]*?)```/g,'<pre style="white-space:pre-wrap;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;margin:6px 0">$1</pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>').replace(/^\s*[-*]\s+/gm,'• ').replace(/\n/g,'<br>')}
+function speakOnly(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const clean=text.replace(/```[\s\S]*?```/g,' code shown on screen. ').replace(/[*_#`>]/g,'').replace(/\s+/g,' ').trim();
+  const parts=clean.match(/[^.!?]+[.!?]*/g)||[clean];
+  parts.forEach((p,i)=>{const u=new SpeechSynthesisUtterance(p.trim());if(voice)u.voice=voice;u.rate=1.02;u.pitch=1.05;
+    if(i===0)u.onstart=()=>{orbWrap.classList.add('speaking');statusEl.textContent='Speaking'};
+    if(i===parts.length-1)u.onend=()=>{orbWrap.classList.remove('speaking');statusEl.textContent='Tap the orb or the mic to talk'};
+    speechSynthesis.speak(u)});
+}
+let busy=false;
+async function askAI(q){
+  if(typeof puter==='undefined'){return say("My AI brain didn't load. Check your internet connection and refresh the page.")}
+  if(busy) return;
+  busy=true; history.push({role:'user',content:q});
+  const m=document.createElement('div');m.className='msg nova';m.innerHTML='<span style="opacity:.6">Thinking…</span>';log.appendChild(m);log.scrollTop=log.scrollHeight;
+  statusEl.textContent='Thinking…'; orbWrap.classList.add('listening');
+  let full='';
+  try{
+    const resp=await puter.ai.chat(history.slice(-21),false,{stream:true});
+    for await(const part of resp){ if(part&&part.text){full+=part.text;m.innerHTML=md(full);log.scrollTop=log.scrollHeight} }
+    if(!full) full="Sorry, I couldn't come up with an answer. Please try again.";
+    m.innerHTML=md(full); history.push({role:'assistant',content:full}); speakOnly(full);
+  }catch(e){
+    history.pop(); full="Sorry, I couldn't reach my AI brain just now. If a Puter sign-in window appeared, please sign in (it's free) and ask again.";
+    m.textContent=full; speakOnly(full);
+  }finally{busy=false;orbWrap.classList.remove('listening');if(statusEl.textContent==='Thinking…')statusEl.textContent='Tap the orb or the mic to talk'}
 }
 
 // Speech input
@@ -165,7 +199,7 @@ function toggleMic(){
 orbWrap.onclick=toggleMic; document.getElementById('mic').onclick=toggleMic;
 document.getElementById('form').onsubmit=e=>{e.preventDefault();handle(input.value);input.value=''};
 
-['What time is it?','Tell me a joke','Open YouTube','Weather in Hyderabad','Set timer for 1 minute','What can you do?'].forEach(c=>{
+['Explain black holes simply','Give me 3 healthy breakfast ideas','What time is it?','Open YouTube','Set timer for 1 minute','What can you do?'].forEach(c=>{
   const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=c;b.onclick=()=>handle(c);document.getElementById('chips').appendChild(b);
 });
 
