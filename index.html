@@ -44,7 +44,7 @@
 <body>
 <header>
   <div class="logo">N O V A</div>
-  <div id="clock"></div>
+  <div style="display:flex;align-items:center;gap:14px"><button type="button" id="newChat" title="Start a new conversation" style="padding:8px 14px;font-size:.85rem">＋ New chat</button><div id="clock"></div></div>
 </header>
 <main>
   <div class="orb-wrap" id="orbWrap" title="Tap to talk">
@@ -148,7 +148,7 @@ function handle(raw){
     return openSite('https://www.google.com/search?q='+encodeURIComponent(s),s);
   }
   if((m=t.match(/^(?:search(?: for)?|google|look up)\s+(.+)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent(m[1]),`Google results for ${m[1]}`);
-  if(/^clear( chat)?$/.test(t)){log.innerHTML='';return say('Cleared.')}
+  if(/^(clear( chat)?|new chat|start (a )?new chat|start over)$/.test(t)){newChat();return}
   if(/^(help|what can you do)$/.test(t)) return say("Ask me anything, from simple facts to complex questions, and I'll explain. I can also tell the time and date, open websites, search Google, YouTube or Wikipedia, check the weather, set timers, do maths, and remember your name.");
   if(/^(stop|stop talking|be quiet|shut up|quiet|silence)$/.test(t)){stopSpeaking();return}
   if(/^(mute|mute voice|voice off)$/.test(t)){muted=true;localStorageSet('nova_muted','1');stopSpeaking();showMute();return addMsg('Voice muted. Tap 🔇 to turn it back on.','nova')}
@@ -172,6 +172,10 @@ function speakOnly(text){
     speechSynthesis.speak(u)});
 }
 let busy=false;
+function newChat(){
+  stopSpeaking(); history.length=0; log.innerHTML='';
+  addMsg(`New chat started${userName?', '+userName:''}. What would you like to know?`,'nova');
+}
 async function askAI(q){
   if(busy) return;
   busy=true; history.push({role:'user',content:q});
@@ -208,6 +212,7 @@ function orbTap(){
   toggleMic();
 }
 orbWrap.onclick=orbTap;
+document.getElementById('newChat').onclick=()=>{if(!busy)newChat()};
 const muteBtn=document.getElementById('mute');
 function showMute(){muteBtn.textContent=muted?'🔇':'🔊';muteBtn.title=muted?'Voice is off (tap to turn on)':'Voice is on (tap to mute)'}
 showMute();
