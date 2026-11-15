@@ -170,7 +170,7 @@ function handle(raw){
   if((m=t.match(/^(?:call|phone|dial|ring)\s+(.+)$/))) return say(`I can't see your contacts, so please say the number, for example: call 9876543210.`);
   if((m=text.match(/^(?:text|sms|message)\s+(\+?\d[\d\s()-]*\d)(?:\s+(?:saying|that|:)?\s*(.*))?$/i))){const n=m[1].replace(/[^\d+]/g,'');location.href='sms:'+n+(m[2]?'?&body='+encodeURIComponent(m[2]):'');return say(`Opening a text to ${n}.`)}
   if((m=text.match(/^whats\s?app\s+(\+?\d[\d\s()-]*\d)(?:\s+(?:saying|that|:)?\s*(.*))?$/i))){const n=m[1].replace(/[^\d]/g,'');return openSite('https://wa.me/'+n+(m[2]?'?text='+encodeURIComponent(m[2]):''),`WhatsApp chat with ${n}`)}
-  if((m=text.match(/^(?:e-?mail|mail)\s+(\S+@\S+)(?:\s+(?:saying|about|that|:)\s*|\s+)?(.*)$/i))){location.href='mailto:'+m[1]+(m[2]?'?body='+encodeURIComponent(m[2]):'');return say(`Opening an email to ${m[1]}.`)}
+  if((m=text.match(/^(?:e-?mail|mail)\s+(\S+@\S+)(?:\s+(?:saying|about|that|:)\s*|\s+)?(.*)$/i))){openSite('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(m[1])+(m[2]?'&body='+encodeURIComponent(m[2]):''),`an email to ${m[1]}`);return}
   if(/^(battery|battery level|how much battery|what('s| is) my battery( level)?)( left)?$/.test(t)){
     if(!navigator.getBattery) return say("This browser doesn't share battery information.");
     navigator.getBattery().then(b=>say(`Your battery is at ${Math.round(b.level*100)} percent${b.charging?' and charging':''}.`));return;
