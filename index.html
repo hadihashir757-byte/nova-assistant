@@ -65,7 +65,8 @@
 <script>
 const log = document.getElementById('log'), statusEl = document.getElementById('status'),
       orbWrap = document.getElementById('orbWrap'), input = document.getElementById('input');
-let userName = localStorageGet('nova_name');
+function cleanName(raw){if(!raw)return null;let s=String(raw).replace(/["'“”‘’]/g,' ').split(/[,.!?;]|\b(?:and|but|change|chainge|please|so|not|remember|memory|memmory|it|ok|okay)\b/i)[0].trim();const w=s.split(/\s+/).filter(x=>/^[a-z\u00C0-\u024F-]+$/i.test(x)).slice(0,3);return w.length?w.join(' ').replace(/\b\w/g,c=>c.toUpperCase()):null}
+let userName = cleanName(localStorageGet('nova_name'));
 let muted = localStorageGet('nova_muted')==='1';
 const IDLE='Tap the orb or the mic to talk';
 function stopSpeaking(){if('speechSynthesis' in window)speechSynthesis.cancel();orbWrap.classList.remove('speaking');if(statusEl.textContent.startsWith('Speaking'))statusEl.textContent=IDLE}
@@ -119,7 +120,8 @@ function handle(raw){
   let m;
 
   if(/^(hi|hello|hey|hii|namaste|good (morning|afternoon|evening))( there)?$/.test(t)) return say(`${greet()}${userName?', '+userName:''}! How can I help you?`);
-  if((m=t.match(/^(?:my name is|call me)\s+(.+)/))){userName=m[1].replace(/\b\w/g,c=>c.toUpperCase());localStorageSet('nova_name',userName);return say(`Nice to meet you, ${userName}. I'll remember that.`)}
+  if((m=t.match(/^(?:my name is|call me)\s+(.+)/))){const nm=cleanName(m[1]); if(!nm) return say("Sorry, I didn't catch your name. Try saying: my name is Hadi."); userName=nm;localStorageSet('nova_name',userName);return say(`Nice to meet you, ${userName}. I'll remember that.`)}
+  if(/^(forget|reset|delete) my name$/.test(t)){userName=null;localStorageSet('nova_name','');return say("Okay, I've forgotten your name.")}
   if(/^what('s| is) my name$/.test(t)) return say(userName?`Your name is ${userName}.`:`I don't know yet. Say "my name is" followed by your name.`);
   if(/^(what('s| is) your name|who are you)$/.test(t)) return say("I'm NOVA, your personal voice assistant.");
   if(/^how are you( doing)?$/.test(t)) return say("All systems running smoothly. Thanks for asking!");
@@ -172,6 +174,10 @@ function speakOnly(text){
     speechSynthesis.speak(u)});
 }
 let busy=false;
+function withContext(msgs){
+  const note='[Private note for NOVA, not from the user: '+(userName?('The user\'s name is '+userName+'. '):'You don\'t know the user\'s name yet; they can tell you by saying "my name is ...". ')+'This website saves the user\'s name in their browser, so NOVA remembers it in new chats and after closing the tab, on the same device and browser. Today is '+new Date().toDateString()+'.]\n';
+  return msgs.map((m,i)=>i===msgs.length-1&&m.role==='user'?{role:'user',content:note+m.content}:m);
+}
 function newChat(){
   stopSpeaking(); history.length=0; log.innerHTML='';
   addMsg(`New chat started${userName?', '+userName:''}. What would you like to know?`,'nova');
@@ -183,7 +189,7 @@ async function askAI(q){
   statusEl.textContent='Thinking…'; orbWrap.classList.add('listening');
   let full='';
   try{
-    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(-20)})});
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:withContext(history.slice(-20))})});
     const data=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(data.error||('HTTP '+r.status));
     full=data.text||'';
