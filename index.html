@@ -2,14 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>NOVA — Voice Assistant</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#05070f">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NOVA">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   :root{--bg:#05070f;--panel:rgba(20,28,52,.55);--line:rgba(120,160,255,.18);--a:#5ef0d0;--b:#8b7bff;--text:#e6ecff;--dim:#8a95b8}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(ellipse at top,#0c1430 0%,var(--bg) 60%);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
   body::before{content:"";position:fixed;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(circle at center,black 20%,transparent 75%);opacity:.35;pointer-events:none}
-  header{width:100%;max-width:900px;display:flex;justify-content:space-between;align-items:center;padding:22px 24px;position:relative;z-index:1}
+  header{width:100%;max-width:900px;display:flex;justify-content:space-between;align-items:center;padding:calc(22px + env(safe-area-inset-top)) 24px 22px;position:relative;z-index:1}
+  @media (display-mode: standalone){footer{display:none}}
   .logo{font-weight:700;letter-spacing:.35em;font-size:1.1rem;background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;color:transparent}
   #clock{font-variant-numeric:tabular-nums;color:var(--dim);font-size:.95rem;letter-spacing:.08em}
   main{width:100%;max-width:900px;flex:1;display:flex;flex-direction:column;align-items:center;padding:0 20px 24px;position:relative;z-index:1}
@@ -44,7 +53,7 @@
 <body>
 <header>
   <div class="logo">N O V A</div>
-  <div style="display:flex;align-items:center;gap:14px"><button type="button" id="newChat" title="Start a new conversation" style="padding:8px 14px;font-size:.85rem">＋ New chat</button><div id="clock"></div></div>
+  <div style="display:flex;align-items:center;gap:14px"><button type="button" id="installBtn" title="Install NOVA as an app" style="display:none;padding:8px 14px;font-size:.85rem">⬇ Install</button><button type="button" id="newChat" title="Start a new conversation" style="padding:8px 14px;font-size:.85rem">＋ New chat</button><div id="clock"></div></div>
 </header>
 <main>
   <div class="orb-wrap" id="orbWrap" title="Tap to talk">
@@ -151,11 +160,37 @@ function handle(raw){
   }
   if((m=t.match(/^(?:search(?: for)?|google|look up)\s+(.+)/))) return openSite('https://www.google.com/search?q='+encodeURIComponent(m[1]),`Google results for ${m[1]}`);
   if(/^(clear( chat)?|new chat|start (a )?new chat|start over)$/.test(t)){newChat();return}
-  if(/^(help|what can you do)$/.test(t)) return say("Ask me anything, from simple facts to complex questions, and I'll explain. I can also tell the time and date, open websites, search Google, YouTube or Wikipedia, check the weather, set timers, do maths, and remember your name.");
+  if(/^(help|what can you do)$/.test(t)) return say("Ask me anything, from simple facts to complex questions, and I'll explain. I can also call or text a number, open WhatsApp or email, check your battery, set reminders, show where you are, open websites, search, check the weather, set timers, do maths, and remember your name. Say install to add me as an app.");
   if(/^(stop|stop talking|be quiet|shut up|quiet|silence)$/.test(t)){stopSpeaking();return}
   if(/^(mute|mute voice|voice off)$/.test(t)){muted=true;localStorageSet('nova_muted','1');stopSpeaking();showMute();return addMsg('Voice muted. Tap 🔇 to turn it back on.','nova')}
   if(/^(unmute|voice on)$/.test(t)){muted=false;localStorageSet('nova_muted','0');showMute();return say('Voice is back on.')}
   if(/^(bye|goodbye|sleep)/.test(t)) return say(`Goodbye${userName?', '+userName:''}. I'll be here when you need me.`);
+  // ---- Device features ----
+  if((m=t.match(/^(?:call|phone|dial|ring)\s+([+\d][\d\s()-]{2,})$/))){const n=m[1].replace(/[^\d+]/g,'');location.href='tel:'+n;return say(`Calling ${n}.`)}
+  if((m=t.match(/^(?:call|phone|dial|ring)\s+(.+)$/))) return say(`I can't see your contacts, so please say the number, for example: call 9876543210.`);
+  if((m=text.match(/^(?:text|sms|message)\s+(\+?\d[\d\s()-]*\d)(?:\s+(?:saying|that|:)?\s*(.*))?$/i))){const n=m[1].replace(/[^\d+]/g,'');location.href='sms:'+n+(m[2]?'?&body='+encodeURIComponent(m[2]):'');return say(`Opening a text to ${n}.`)}
+  if((m=text.match(/^whats\s?app\s+(\+?\d[\d\s()-]*\d)(?:\s+(?:saying|that|:)?\s*(.*))?$/i))){const n=m[1].replace(/[^\d]/g,'');return openSite('https://wa.me/'+n+(m[2]?'?text='+encodeURIComponent(m[2]):''),`WhatsApp chat with ${n}`)}
+  if((m=text.match(/^(?:e-?mail|mail)\s+(\S+@\S+)(?:\s+(?:saying|about|that|:)\s*|\s+)?(.*)$/i))){location.href='mailto:'+m[1]+(m[2]?'?body='+encodeURIComponent(m[2]):'');return say(`Opening an email to ${m[1]}.`)}
+  if(/^(battery|battery level|how much battery|what('s| is) my battery( level)?)( left)?$/.test(t)){
+    if(!navigator.getBattery) return say("This browser doesn't share battery information.");
+    navigator.getBattery().then(b=>say(`Your battery is at ${Math.round(b.level*100)} percent${b.charging?' and charging':''}.`));return;
+  }
+  if(/^(vibrate|buzz)( my phone)?$/.test(t)){if(navigator.vibrate&&navigator.vibrate([200,100,200]))return say('Bzzz!');return say("This device can't vibrate from a website.")}
+  if(/^(go |enter |exit |leave )?full ?screen( mode)?$/.test(t)){if(document.fullscreenElement){document.exitFullscreen();return say('Exited full screen.')}document.documentElement.requestFullscreen?.().catch(()=>{});return say('Going full screen.')}
+  if(/^(where am i|my location|what('s| is) my location|show my location)$/.test(t)){
+    if(!navigator.geolocation) return say("This browser can't share your location.");
+    say('Finding your location…');
+    navigator.geolocation.getCurrentPosition(p=>{const {latitude:a,longitude:o}=p.coords;openSite(`https://www.google.com/maps?q=${a},${o}`,'your location on the map')},()=>say("I couldn't get your location. Please allow location access and try again."),{timeout:15000});return;
+  }
+  if((m=t.match(/^(?:remind me|set (?:a )?reminder)\s+(?:in|after)\s+(\d+)\s*(second|sec|minute|min|hour)s?\s*(?:to\s+|that\s+|about\s+)?(.*)$/))){
+    const n=+m[1],u=m[2],what=m[3]||'your reminder',ms=n*(u.startsWith('h')?3600000:u.startsWith('m')?60000:1000);
+    if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();
+    setTimeout(()=>{const msg=`Reminder: ${what}`;say(msg);if(navigator.vibrate)navigator.vibrate([300,150,300]);try{if('Notification' in window&&Notification.permission==='granted'){navigator.serviceWorker?.ready.then(r=>r.showNotification('NOVA',{body:msg,icon:'/icon-192.png'})).catch(()=>new Notification('NOVA',{body:msg}))}}catch(e){}},ms);
+    return say(`Okay, I'll remind you in ${n} ${u.startsWith('h')?'hour':u.startsWith('m')?'minute':'second'}${n>1?'s':''}. Keep NOVA open for the reminder to work.`);
+  }
+  if(/^share( nova)?$/.test(t)){if(navigator.share){navigator.share({title:'NOVA',text:'Try my voice assistant NOVA',url:location.origin}).catch(()=>{});return say('Opening share.')}return say(`Here's the link to share: ${location.origin}`)}
+  if((m=text.match(/^copy\s+(.+)$/i))){navigator.clipboard?.writeText(m[1]).then(()=>say('Copied.'),()=>say("I couldn't copy that."));return}
+  if(/^(install|install app|install nova|add to home ?screen)$/.test(t)) return installApp();
   return askAI(text);
 }
 
@@ -218,6 +253,19 @@ function orbTap(){
   toggleMic();
 }
 orbWrap.onclick=orbTap;
+// ---- Install as an app ----
+let installEvt=null; const installBtn=document.getElementById('installBtn');
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(!standalone)installBtn.style.display=''});
+window.addEventListener('appinstalled',()=>{installBtn.style.display='none';installEvt=null;say('NOVA is installed. You can open it from your home screen or app list.')});
+function installApp(){
+  if(standalone) return say("You're already using NOVA as an app.");
+  if(installEvt){installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;installBtn.style.display='none'});return}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  return say(ios?"On iPhone: tap the Share button in Safari, then Add to Home Screen.":"In Chrome, open the menu (three dots) and choose Install NOVA or Add to Home screen. On a computer, you can also click the install icon at the right end of the address bar.");
+}
+installBtn.onclick=installApp;
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.getElementById('newChat').onclick=()=>{if(!busy)newChat()};
 const muteBtn=document.getElementById('mute');
 function showMute(){muteBtn.textContent=muted?'🔇':'🔊';muteBtn.title=muted?'Voice is off (tap to turn on)':'Voice is on (tap to mute)'}
