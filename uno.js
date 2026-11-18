@@ -165,12 +165,14 @@
     // allow tap to skip
     let skipped=false; const skip=()=>{ if(!skipped){ skipped=true; reveal(); } };
     cine.addEventListener("click", skip);
+    let revealed=false;
 
     setTimeout(()=>cine.classList.add("clap"), 150);
     setTimeout(()=>cine.querySelector(".cue").classList.add("show"), 1150);
     setTimeout(()=>{ if(!skipped) reveal(); }, 2200);
 
     function reveal(){
+      if(revealed) return; revealed=true;
       cine.querySelector(".cue").classList.remove("show");
       root.classList.add("eyesopen");           // eyelids open
       setTimeout(()=>{ cine.style.display="none"; buildScene(); askHandSize(); }, 1150);
