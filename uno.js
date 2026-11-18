@@ -146,7 +146,7 @@
     // remove any previous
     const old=document.getElementById("uno"); if(old) old.remove();
 
-    const root=document.createElement("div"); root.id="uno"; document.body.appendChild(root);
+    const root=document.createElement("div"); root.id="uno"; root.classList.add("show"); document.body.appendChild(root);
     // pause NOVA voice/mic if present
     try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){}
 
