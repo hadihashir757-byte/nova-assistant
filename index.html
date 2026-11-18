@@ -72,6 +72,7 @@
 </main>
 <footer>NOVA works best in Chrome or Edge. Microphone access is needed for voice.</footer>
 
+<script src="/uno.js"></script>
 <script>
 const log = document.getElementById('log'), statusEl = document.getElementById('status'),
       orbWrap = document.getElementById('orbWrap'), input = document.getElementById('input');
@@ -128,6 +129,8 @@ function handle(raw){
   addMsg(text,'user');
   const t=text.toLowerCase().replace(/[?!.,]+$/,'').replace(/^(hey |ok |okay )?nova[, ]*/,'');
   let m;
+
+  if(/^(let'?s |lets )?play uno$/.test(t)||/^uno( game)?$/.test(t)){ if(window.startUno){say("Dealing you in. Let's play UNO!");startUno();}else{say("The game is still loading, try again in a few seconds.");} return; }
 
   if(/^(hi|hello|hey|hii|namaste|good (morning|afternoon|evening))( there)?$/.test(t)) return say(`${greet()}${userName?', '+userName:''}! How can I help you?`);
   if((m=t.match(/^(?:my name is|call me)\s+(.+)/))){const nm=cleanName(m[1]); if(!nm) return say("Sorry, I didn't catch your name. Try saying: my name is Hadi."); userName=nm;localStorageSet('nova_name',userName);return say(`Nice to meet you, ${userName}. I'll remember that.`)}
