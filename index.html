@@ -285,8 +285,12 @@ function buildWake(){
   wakeRec.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ wake=false; localStorageSet('nova_wake','0'); showWake(); addMsg('I need microphone access to listen for \"Hey NOVA\". Please allow it, then tap 👂 again.','nova'); } };
   wakeRec.onend=()=>{ if(wake&&!wakeSuppress) setTimeout(()=>{try{wakeRec.start()}catch(e){}},400); };
 }
-function startWake(){ buildWake(); if(!wakeRec)return; wakeSuppress=false; try{wakeRec.start()}catch(e){} }
-function pauseWake(){ wakeSuppress=true; if(wakeRec){try{wakeRec.stop()}catch(e){}} }
+function startWake(){ buildWake(); if(!wakeRec)return; wakeSuppress=false; try{wakeRec.start()}catch(e){} reqWakeLock(); }
+function pauseWake(){ wakeSuppress=true; if(wakeRec){try{wakeRec.stop()}catch(e){}} if(!wake)relWakeLock(); }
+let wakeLock=null;
+async function reqWakeLock(){ try{ if(wake&&'wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); if(wakeLock&&wakeLock.addEventListener)wakeLock.addEventListener('release',()=>{wakeLock=null}); } }catch(e){} }
+function relWakeLock(){ try{ if(wakeLock)wakeLock.release(); }catch(e){} wakeLock=null; }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&wake){ startWake(); reqWakeLock(); } });
 wakeBtn.onclick=()=>{
   if(!SR) return say("Voice input isn't supported in this browser. Try Chrome or Edge.");
   wake=!wake; localStorageSet('nova_wake',wake?'1':'0'); showWake();
