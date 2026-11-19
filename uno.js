@@ -7,6 +7,7 @@
   const COLORS = ["red","yellow","green","blue"];
   const HEX = { red:"#e23b3b", yellow:"#f1c40f", green:"#2ecc71", blue:"#3b7de2" };
 
+
   function buildDeck(){
     const d=[];
     for(const c of COLORS){
@@ -69,26 +70,48 @@
     #uno .exit:hover{background:rgba(0,0,0,.7)}
     /* cinematic */
     #uno .cine{position:absolute;inset:0;z-index:30;background:#000;display:flex;align-items:center;justify-content:center}
-    #uno .hand{position:absolute;top:50%;font-size:34vh;transform:translateY(-50%);filter:drop-shadow(0 0 20px rgba(94,240,208,.4))}
-    #uno .hand.l{left:-40vw;transform:translateY(-50%) scaleX(1)}
-    #uno .hand.r{right:-40vw;transform:translateY(-50%) scaleX(-1)}
-    #uno .cine.clap .hand.l{animation:handL 1s ease forwards}
-    #uno .cine.clap .hand.r{animation:handR 1s ease forwards}
-    @keyframes handL{to{left:5vw}}
-    @keyframes handR{to{right:5vw}}
+    #uno .dealGlow{position:absolute;z-index:33;left:50%;top:50%;width:70vmin;height:70vmin;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(94,240,208,.22),rgba(139,123,255,.12) 40%,transparent 70%);filter:blur(12px)}
+    #uno .hand{position:absolute;z-index:34;top:50%;width:min(52vh,46vw);transform:translateY(-46%);filter:drop-shadow(0 18px 30px rgba(0,0,0,.55));transition:opacity .45s ease}
+    #uno .hand svg{width:100%;height:auto;display:block}
+    #uno .hand.l{left:-55vw;transform:translateY(-46%) rotate(-8deg)}
+    #uno .hand.r{right:-55vw;transform:translateY(-46%) rotate(8deg) scaleX(-1)}
+    #uno .cine.revealing .hand{opacity:0}
+    #uno .cine.clap .hand.l{animation:handL 1.1s cubic-bezier(.2,.7,.2,1) forwards}
+    #uno .cine.clap .hand.r{animation:handR 1.1s cubic-bezier(.2,.7,.2,1) forwards}
+    @keyframes handL{to{left:-6vw}}
+    @keyframes handR{to{right:-6vw}}
     #uno .lid{position:absolute;left:0;right:0;height:52%;background:#000;z-index:32;transition:transform 1.1s cubic-bezier(.7,0,.3,1)}
     #uno .lid.top{top:0}
     #uno .lid.bot{bottom:0}
     #uno.eyesopen .lid.top{transform:translateY(-100%)}
     #uno.eyesopen .lid.bot{transform:translateY(100%)}
-    #uno .cue{position:absolute;z-index:33;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:1.5rem;letter-spacing:.3em;text-transform:uppercase;opacity:0;transition:opacity .6s;color:#5ef0d0}
+    #uno .cue{position:absolute;z-index:35;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:1.5rem;letter-spacing:.3em;text-transform:uppercase;opacity:0;transition:opacity .6s;color:#5ef0d0}
     #uno .cue.show{opacity:1}
     /* table */
-    #uno .scene{position:absolute;inset:0;z-index:10;background:radial-gradient(ellipse at 50% 120%,#13324f 0%,#0a1b2e 55%,#05070f 100%);perspective:900px;display:flex;flex-direction:column}
-    #uno .felt{position:absolute;left:50%;top:46%;width:150vw;height:120vh;transform:translate(-50%,-50%) rotateX(58deg);background:radial-gradient(ellipse at center,#1f7a4d 0%,#176b42 45%,#0e4b2e 100%);border-radius:50%;box-shadow:inset 0 0 120px rgba(0,0,0,.5)}
-    #uno .novaSeat{position:relative;z-index:12;text-align:center;padding:calc(16px + env(safe-area-inset-top)) 0 4px}
-    #uno .novaOrb{width:52px;height:52px;border-radius:50%;margin:0 auto 4px;background:radial-gradient(circle at 35% 30%,#d9fff6,#5ef0d0 30%,#8b7bff 75%);box-shadow:0 0 24px rgba(94,240,208,.6)}
-    #uno .novaName{font-size:.8rem;letter-spacing:.2em;color:#bfe9df;text-transform:uppercase}
+    #uno .scene{position:absolute;inset:0;z-index:10;background:radial-gradient(ellipse at 50% 8%,#1a2d4a 0%,#0c1b2e 45%,#05070f 100%);perspective:1100px;display:flex;flex-direction:column;overflow:hidden;transform-origin:50% 42%;animation:sitDown 1.25s cubic-bezier(.2,.75,.2,1) both}
+    @keyframes sitDown{
+      0%{transform:translateY(-16%) scale(1.22) rotateX(10deg);filter:blur(5px);opacity:0}
+      35%{opacity:1;filter:blur(1px)}
+      70%{transform:translateY(2%) scale(.99) rotateX(0deg);filter:blur(0)}
+      100%{transform:translateY(0) scale(1) rotateX(0deg);filter:blur(0)}
+    }
+    #uno .scene::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(0,0,0,.55) 100%);z-index:20}
+    #uno .felt{position:absolute;left:50%;top:50%;width:170vw;height:135vh;transform:translate(-50%,-46%) rotateX(60deg);background:radial-gradient(ellipse at 50% 38%,#2b9a63 0%,#1f7a4d 32%,#14633d 60%,#0b3f27 100%);border-radius:50%;box-shadow:inset 0 0 160px rgba(0,0,0,.6),0 -30px 90px rgba(0,0,0,.5)}
+    #uno .felt::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse at 50% 20%,rgba(255,255,255,.14),transparent 45%)}
+    #uno .felt::after{content:"";position:absolute;inset:6%;border-radius:50%;border:2px solid rgba(255,255,255,.08)}
+    #uno .novaSeat{position:relative;z-index:12;text-align:center;padding:calc(24px + env(safe-area-inset-top)) 0 4px}
+    #uno .novaBloom{position:absolute;left:50%;top:calc(24px + env(safe-area-inset-top));width:300px;height:300px;transform:translate(-50%,-30%);background:radial-gradient(circle,rgba(94,240,208,.35),rgba(139,123,255,.18) 35%,transparent 68%);filter:blur(10px);pointer-events:none}
+    #uno .novaOrb{position:relative;width:118px;height:118px;margin:0 auto 10px}
+    #uno .novaOrb .core{position:absolute;inset:24px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#f2fffb 0%,#9af7e4 18%,#5ef0d0 40%,#8b7bff 78%,#3b2b7a 100%);box-shadow:0 0 40px rgba(94,240,208,.7),0 0 90px rgba(139,123,255,.5),inset 0 -8px 22px rgba(43,29,107,.6);animation:orbPulse 3.4s ease-in-out infinite}
+    #uno .novaOrb .gloss{position:absolute;inset:24px;border-radius:50%;background:radial-gradient(circle at 36% 26%,rgba(255,255,255,.85),rgba(255,255,255,0) 42%);mix-blend-mode:screen}
+    #uno .novaOrb .ring{position:absolute;border-radius:50%;border:2px solid transparent}
+    #uno .novaOrb .ring.a{inset:0;border-top-color:#5ef0d0;border-left-color:#8b7bff;animation:spin 5s linear infinite}
+    #uno .novaOrb .ring.b{inset:10px;border-top-color:#8b7bff;border-right-color:#5ef0d0;opacity:.75;animation:spin 7.5s linear infinite reverse}
+    #uno .novaOrb .ring.c{inset:3px;border:1px dashed rgba(94,240,208,.35);animation:spin 16s linear infinite}
+    #uno .thinking .novaOrb .core{animation:orbPulse 1s ease-in-out infinite}
+    #uno .thinking .novaOrb .ring.a{animation-duration:1.4s}
+    @keyframes orbPulse{50%{transform:scale(1.07);box-shadow:0 0 60px rgba(94,240,208,.9),0 0 130px rgba(139,123,255,.65),inset 0 -8px 22px rgba(43,29,107,.6)}}
+    #uno .novaName{font-size:.82rem;letter-spacing:.3em;color:#d7fff5;text-transform:uppercase;text-shadow:0 0 10px rgba(94,240,208,.5)}
     #uno .oppHand{display:flex;justify-content:center;gap:-14px;margin-top:6px;min-height:62px}
     #uno .oppHand .mini{width:38px;height:56px;margin-left:-14px;border-radius:6px;background:linear-gradient(135deg,#2b1d6b,#8b7bff);border:2px solid #0b1026;box-shadow:0 2px 6px rgba(0,0,0,.4)}
     #uno .center{position:relative;z-index:12;flex:1;display:flex;align-items:center;justify-content:center;gap:22px}
@@ -109,6 +132,8 @@
     #uno .card .cnr.tl{top:4px;left:6px}
     #uno .card .cnr.br{bottom:4px;right:6px;transform:rotate(180deg)}
     #uno .card .oval{position:absolute;inset:10px;background:rgba(255,255,255,.22);border-radius:50%/40%}
+    #uno .card::after{content:"";position:absolute;inset:0;border-radius:6px;background:linear-gradient(135deg,rgba(255,255,255,.4),rgba(255,255,255,0) 42%,rgba(0,0,0,.18));pointer-events:none}
+    #uno .center .card{box-shadow:0 10px 24px rgba(0,0,0,.55)}
     #uno .card.back{background:linear-gradient(135deg,#2b1d6b,#8b7bff)}
     #uno .card.wildface{background:conic-gradient(#e23b3b 0 25%,#f1c40f 0 50%,#2ecc71 0 75%,#3b7de2 0)}
     #uno .draw{width:64px;height:94px}
@@ -158,7 +183,7 @@
 
     // --- cinematic intro ---
     const cine=document.createElement("div"); cine.className="cine";
-    cine.innerHTML=`<div class="hand l">👋</div><div class="hand r">👋</div>
+    cine.innerHTML=`<div class="dealGlow"></div>
       <div class="lid top"></div><div class="lid bot"></div>
       <div class="cue">Open your eyes…</div>`;
     root.appendChild(cine);
@@ -173,6 +198,7 @@
 
     function reveal(){
       if(revealed) return; revealed=true;
+      cine.classList.add("revealing");
       cine.querySelector(".cue").classList.remove("show");
       root.classList.add("eyesopen");           // eyelids open
       setTimeout(()=>{ cine.style.display="none"; buildScene(); askHandSize(); }, 1150);
@@ -184,7 +210,7 @@
       const scene=document.createElement("div"); scene.className="scene";
       scene.innerHTML=`
         <div class="felt"></div>
-        <div class="novaSeat"><div class="novaOrb"></div><div class="novaName">NOVA</div>
+        <div class="novaSeat"><div class="novaBloom"></div><div class="novaOrb"><span class="ring a"></span><span class="ring b"></span><span class="ring c"></span><span class="core"></span><span class="gloss"></span></div><div class="novaName">NOVA</div>
           <div class="oppHand" id="uno-opp"></div></div>
         <div class="center">
           <div class="pile"><div class="draw card back" id="uno-draw"></div><small>Draw</small></div>
@@ -287,7 +313,7 @@
         if(who==="me"){ state.turn="me"; setStatus(effMsg(card,true)); render(); }
         else { setStatus(effMsg(card,false)); setTimeout(novaTurn, 900); }
       } else {
-        if(who==="me"){ state.turn="nova"; setStatus("NOVA's turn…"); render(); setTimeout(novaTurn, 900); }
+        if(who==="me"){ state.turn="nova"; setStatus("NOVA's turn…"); root.classList.add("thinking"); render(); setTimeout(novaTurn, 1100); }
         else { state.turn="me"; setStatus("Your turn."); render(); }
       }
     }
@@ -313,6 +339,7 @@
 
     function novaTurn(){
       if(state.over) return;
+      root.classList.remove("thinking");
       let idx=aiChoose(state.nova, topCard(), state.color);
       if(idx<0){
         drawN("nova",1); render();
